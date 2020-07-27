@@ -91,37 +91,38 @@ class _BoardState extends State<_Board> {
 
   @override
   Widget build(BuildContext context) {
-    return InteractiveViewer(
-      child: DragTarget<_Team>(
-        key: _dragTargetKey,
-        onAcceptWithDetails: (DragTargetDetails details) {
-          final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
-          final Offset dragTargetOffset = renderBox.localToGlobal(Offset.zero);
-          final Offset offset = details.offset - dragTargetOffset;
-          setState(() {
-            _pieces.add(_PieceData(
-              offset: offset,
-              team: details.data,
-            ));
-          });
-        },
-        onWillAccept: (_Team team) {
-          return true;
-        },
-        builder: (BuildContext context, List<_Team> candidateData, List rejectedData) {
-          return Stack(
-            children: <Widget>[
-              Image.asset(
-                'images/go_board.png',
-              ),
-              ..._pieces.map((_PieceData pieceData) => Positioned(
-                top: pieceData.offset.dy,
-                left: pieceData.offset.dx,
-                child: _Piece(team: pieceData.team),
-              )).toList(),
-            ],
-          );
-        },
+    return ClipRect(
+      child: InteractiveViewer(
+        child: DragTarget<_Team>(
+          key: _dragTargetKey,
+          onAcceptWithDetails: (DragTargetDetails details) {
+            final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
+            final Offset offset = renderBox.globalToLocal(details.offset);
+            setState(() {
+              _pieces.add(_PieceData(
+                offset: offset,
+                team: details.data,
+              ));
+            });
+          },
+          onWillAccept: (_Team team) {
+            return true;
+          },
+          builder: (BuildContext context, List<_Team> candidateData, List rejectedData) {
+            return Stack(
+              children: <Widget>[
+                Image.asset(
+                  'images/go_board.png',
+                ),
+                ..._pieces.map((_PieceData pieceData) => Positioned(
+                  top: pieceData.offset.dy,
+                  left: pieceData.offset.dx,
+                  child: _Piece(team: pieceData.team),
+                )).toList(),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
