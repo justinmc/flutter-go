@@ -8,12 +8,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Go Demo',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MyHomePage(title: 'Go'),
+      home: MyHomePage(title: 'Go Demo'),
     );
   }
 }
@@ -66,6 +66,10 @@ enum _Team {
   white,
 }
 
+// The data representing a piece placed on the board.
+//
+// In this demo, a piece can be placed at any coordinate on the board (not
+// necessarily at locations allowed by the rules of go).
 class _PieceData {
   const _PieceData({
     this.offset,
@@ -76,6 +80,7 @@ class _PieceData {
   final _Team team;
 }
 
+// The game board widget.
 class _Board extends StatefulWidget {
   _Board({
     Key key,
@@ -96,6 +101,9 @@ class _BoardState extends State<_Board> {
         child: DragTarget<_Team>(
           key: _dragTargetKey,
           onAcceptWithDetails: (DragTargetDetails details) {
+            // TODO(justinmc): Currently this works in relation to the top left
+            // corner of the piece. Maybe it would be a better experience to use
+            // the location that the piece is being dragged from.
             final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
             final Offset offset = renderBox.globalToLocal(details.offset);
             setState(() {
@@ -112,6 +120,10 @@ class _BoardState extends State<_Board> {
             return Stack(
               children: <Widget>[
                 Image.asset(
+                  // TODO(justinmc): This is a very ugly and inaccurate go board
+                  // that I drew :) It would be better to use a real board
+                  // image, or even to draw the lines and details
+                  // programmatically.
                   'images/go_board.png',
                 ),
                 ..._pieces.map((_PieceData pieceData) => Positioned(
@@ -128,6 +140,7 @@ class _BoardState extends State<_Board> {
   }
 }
 
+// A single game piece.
 class _Piece extends StatelessWidget {
   _Piece({
     Key key,
@@ -150,6 +163,7 @@ class _Piece extends StatelessWidget {
   }
 }
 
+// A game piece that can be dragged.
 class _DraggablePiece extends StatelessWidget {
   _DraggablePiece({
     Key key,
