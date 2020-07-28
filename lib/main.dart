@@ -108,9 +108,6 @@ class _BoardState extends State<_Board> {
                   return DragTarget<_Team>(
                     key: _dragTargetKey,
                     onAcceptWithDetails: (DragTargetDetails details) {
-                      // TODO(justinmc): Currently this works in relation to the top left
-                      // corner of the piece. Maybe it would be a better experience to use
-                      // the location that the piece is being dragged from.
                       final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
                       final Offset localOffset = renderBox.globalToLocal(details.offset);
                       final Offset offset = Offset(
@@ -138,7 +135,11 @@ class _BoardState extends State<_Board> {
                           ..._pieces.map((_PieceData pieceData) => Positioned(
                             left: pieceData.offset.dx * dimension,
                             top: pieceData.offset.dy * dimension,
-                            child: _Piece(team: pieceData.team),
+                            child: _Piece(
+                              width: dimension / 12,
+                              height: dimension / 12,
+                              team: pieceData.team,
+                            ),
                           )).toList(),
                         ],
                       );
@@ -158,21 +159,25 @@ class _BoardState extends State<_Board> {
 class _Piece extends StatelessWidget {
   _Piece({
     Key key,
-    this.team,
+    this.height = 40.0,
     this.isDragging = false,
+    this.team,
+    this.width = 40.0,
   }) : assert(team != null),
        super(key: key);
 
+  final double height;
   final bool isDragging;
   final _Team team;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     final double opacity = isDragging ? 0.4 : 1.0;
     return Container(
       color: team == _Team.black ? Colors.black.withOpacity(opacity) : Colors.white.withOpacity(opacity),
-      width: 40.0,
-      height: 40.0,
+      width: width,
+      height: height,
     );
   }
 }
