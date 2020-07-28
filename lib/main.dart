@@ -211,6 +211,9 @@ class _DraggablePiece extends StatelessWidget {
   Widget build(BuildContext context) {
     return Draggable<_Team>(
       data: team,
+      // TODO(justinmc): It would be cool if the feedback widget perfectly
+      // matched the size of the widget that will be placed on the board when
+      // it's dropped, but that might be more work than it's worth.
       feedback: _Piece(
         height: height,
         isDragging: true,
