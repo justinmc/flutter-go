@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 void main() {
@@ -97,45 +98,57 @@ class _BoardState extends State<_Board> {
   @override
   Widget build(BuildContext context) {
     return InteractiveViewer(
-      child: DragTarget<_Team>(
-        key: _dragTargetKey,
-        onAcceptWithDetails: (DragTargetDetails details) {
-          // TODO(justinmc): Currently this works in relation to the top left
-          // corner of the piece. Maybe it would be a better experience to use
-          // the location that the piece is being dragged from.
-          final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
-          final Offset offset = renderBox.globalToLocal(details.offset);
-          print('justin drop it $offset vs ${details.offset}');
-          setState(() {
-            _pieces.add(_PieceData(
-              offset: offset,
-              team: details.data,
-            ));
-          });
-        },
-        onWillAccept: (_Team team) => true,
-        builder: (BuildContext context, List<_Team> candidateData, List rejectedData) {
-          return Stack(
-            children: <Widget>[
-              Container(
-                child: Center(
-                  child: Image.asset(
-                    // TODO(justinmc): This is a very ugly and inaccurate go board
-                    // that I drew :) It would be better to use a real board
-                    // image, or even to draw the lines and details
-                    // programmatically.
-                    'images/go_board.png',
-                  ),
-                ),
+      child: Stack(
+        children: <Widget>[
+          Container(
+            child: Center(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final double dimension = math.min(constraints.maxWidth, constraints.maxHeight);
+                  return DragTarget<_Team>(
+                    key: _dragTargetKey,
+                    onAcceptWithDetails: (DragTargetDetails details) {
+                      // TODO(justinmc): Currently this works in relation to the top left
+                      // corner of the piece. Maybe it would be a better experience to use
+                      // the location that the piece is being dragged from.
+                      final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
+                      final Offset localOffset = renderBox.globalToLocal(details.offset);
+                      final Offset offset = Offset(
+                        localOffset.dx / dimension,
+                        localOffset.dy / dimension,
+                      );
+                      setState(() {
+                        _pieces.add(_PieceData(
+                          offset: offset,
+                          team: details.data,
+                        ));
+                      });
+                    },
+                    onWillAccept: (_Team team) => true,
+                    builder: (BuildContext context, List<_Team> candidateData, List rejectedData) {
+                      return Stack(
+                        children: <Widget>[
+                          Image.asset(
+                            // TODO(justinmc): This is a very ugly and inaccurate go board
+                            // that I drew :) It would be better to use a real board
+                            // image, or even to draw the lines and details
+                            // programmatically.
+                            'images/go_board.png',
+                          ),
+                          ..._pieces.map((_PieceData pieceData) => Positioned(
+                            left: pieceData.offset.dx * dimension,
+                            top: pieceData.offset.dy * dimension,
+                            child: _Piece(team: pieceData.team),
+                          )).toList(),
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
-              ..._pieces.map((_PieceData pieceData) => Positioned(
-                top: pieceData.offset.dy,
-                left: pieceData.offset.dx,
-                child: _Piece(team: pieceData.team),
-              )).toList(),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       ),
     );
   }
