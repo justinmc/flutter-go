@@ -135,10 +135,15 @@ class _BoardState extends State<_Board> {
                           ..._pieces.map((_PieceData pieceData) => Positioned(
                             left: pieceData.offset.dx * dimension,
                             top: pieceData.offset.dy * dimension,
-                            child: _Piece(
-                              width: dimension / 12,
+                            child: _DraggablePiece(
                               height: dimension / 12,
+                              onDragStarted: () {
+                                setState(() {
+                                  _pieces.remove(pieceData);
+                                });
+                              },
                               team: pieceData.team,
+                              width: dimension / 12,
                             ),
                           )).toList(),
                         ],
@@ -164,6 +169,8 @@ class _Piece extends StatelessWidget {
     this.team,
     this.width = 40.0,
   }) : assert(team != null),
+       assert(height != null),
+       assert(width != null),
        super(key: key);
 
   final double height;
@@ -186,12 +193,18 @@ class _Piece extends StatelessWidget {
 class _DraggablePiece extends StatelessWidget {
   _DraggablePiece({
     Key key,
-    this.team,
+    this.height = 40.0,
     this.isDragging = false,
+    this.onDragStarted,
+    this.team,
+    this.width = 40.0,
   }) : assert(team != null),
        super(key: key);
 
+  final double height;
   final bool isDragging;
+  final VoidCallback onDragStarted;
+  final double width;
   final _Team team;
 
   @override
@@ -199,11 +212,16 @@ class _DraggablePiece extends StatelessWidget {
     return Draggable<_Team>(
       data: team,
       feedback: _Piece(
+        height: height,
         isDragging: true,
         team: team,
+        width: width,
       ),
+      onDragStarted: onDragStarted,
       child: _Piece(
+        height: height,
         team: team,
+        width: width,
       ),
     );
   }
