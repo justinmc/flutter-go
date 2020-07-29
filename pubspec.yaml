@@ -45,7 +45,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - images/go_board.png
+    - images/go_board_09x09.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.

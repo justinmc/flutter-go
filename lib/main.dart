@@ -111,8 +111,12 @@ class _BoardState extends State<_Board> {
                   // fill the constraints.
                   final double constraintsAspectRatio = constraints.maxWidth / constraints.maxHeight;
                   final Size size = Size(
-                    _boardAspectRatio > constraintsAspectRatio ? constraints.maxWidth : constraints.maxHeight * _boardAspectRatio,
-                    _boardAspectRatio > constraintsAspectRatio ? constraints.maxWidth / _boardAspectRatio : constraints.maxHeight,
+                    _boardAspectRatio > constraintsAspectRatio
+                        ? constraints.maxWidth
+                        : constraints.maxHeight * _boardAspectRatio,
+                    _boardAspectRatio > constraintsAspectRatio
+                        ? constraints.maxWidth / _boardAspectRatio
+                        : constraints.maxHeight,
                   );
 
                   return DragTarget<_Team>(
@@ -138,27 +142,33 @@ class _BoardState extends State<_Board> {
                       final double pieceSide = math.min(size.width, size.height) / 12;
                       return Stack(
                         children: <Widget>[
-                          Image.asset(
-                            // TODO(justinmc): This is a very ugly and inaccurate go board
-                            // that I drew :) It would be better to use a real board
-                            // image, or even to draw the lines and details
-                            // programmatically.
-                            'images/go_board.png',
-                          ),
-                          ..._pieces.map((_PieceData pieceData) => Positioned(
-                            left: pieceData.offset.dx * size.width,
-                            top: pieceData.offset.dy * size.height,
-                            child: _DraggablePiece(
-                              height: pieceSide,
-                              onDragStarted: () {
-                                setState(() {
-                                  _pieces.remove(pieceData);
-                                });
-                              },
-                              team: pieceData.team,
-                              width: pieceSide,
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Container(
+                              color: Colors.brown,
+                              child: Image.asset(
+                                // from https://www.1001freedownloads.com/free-clipart/go-board-9-x-9
+                                // under CC license: https://creativecommons.org/publicdomain/zero/1.0/
+                                'images/go_board_09x09.png',
+                              ),
                             ),
-                          )).toList(),
+                          ),
+                          ..._pieces
+                              .map((_PieceData pieceData) => Positioned(
+                                    left: pieceData.offset.dx * size.width,
+                                    top: pieceData.offset.dy * size.height,
+                                    child: _DraggablePiece(
+                                      height: pieceSide,
+                                      onDragStarted: () {
+                                        setState(() {
+                                          _pieces.remove(pieceData);
+                                        });
+                                      },
+                                      team: pieceData.team,
+                                      width: pieceSide,
+                                    ),
+                                  ))
+                              .toList(),
                         ],
                       );
                     },
@@ -181,10 +191,10 @@ class _Piece extends StatelessWidget {
     this.isDragging = false,
     this.team,
     this.width = 40.0,
-  }) : assert(team != null),
-       assert(height != null),
-       assert(width != null),
-       super(key: key);
+  })  : assert(team != null),
+        assert(height != null),
+        assert(width != null),
+        super(key: key);
 
   final double height;
   final bool isDragging;
@@ -211,8 +221,8 @@ class _DraggablePiece extends StatelessWidget {
     this.onDragStarted,
     this.team,
     this.width = 40.0,
-  }) : assert(team != null),
-       super(key: key);
+  })  : assert(team != null),
+        super(key: key);
 
   final double height;
   final bool isDragging;
