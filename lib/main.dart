@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+// The aspect ratio of the board image. Could be derived from the image asset...
+const double _boardAspectRatio = 1080.0 / 1296.0;
+
 void main() {
   runApp(MyApp());
 }
@@ -104,15 +107,22 @@ class _BoardState extends State<_Board> {
             child: Center(
               child: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
-                  final double dimension = math.min(constraints.maxWidth, constraints.maxHeight);
+                  // Calculate the size of the board assuming it is sized to
+                  // fill the constraints.
+                  final double constraintsAspectRatio = constraints.maxWidth / constraints.maxHeight;
+                  final Size size = Size(
+                    _boardAspectRatio > constraintsAspectRatio ? constraints.maxWidth : constraints.maxHeight * _boardAspectRatio,
+                    _boardAspectRatio > constraintsAspectRatio ? constraints.maxWidth / _boardAspectRatio : constraints.maxHeight,
+                  );
+
                   return DragTarget<_Team>(
                     key: _dragTargetKey,
                     onAcceptWithDetails: (DragTargetDetails details) {
                       final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
                       final Offset localOffset = renderBox.globalToLocal(details.offset);
                       final Offset offset = Offset(
-                        localOffset.dx / dimension,
-                        localOffset.dy / dimension,
+                        localOffset.dx / size.width,
+                        localOffset.dy / size.height,
                       );
                       setState(() {
                         _pieces.add(_PieceData(
@@ -123,6 +133,9 @@ class _BoardState extends State<_Board> {
                     },
                     onWillAccept: (_Team team) => true,
                     builder: (BuildContext context, List<_Team> candidateData, List rejectedData) {
+                      // The length of a side of a square piece. It's an
+                      // arbitrary proportion of the board size.
+                      final double pieceSide = math.min(size.width, size.height) / 12;
                       return Stack(
                         children: <Widget>[
                           Image.asset(
@@ -133,17 +146,17 @@ class _BoardState extends State<_Board> {
                             'images/go_board.png',
                           ),
                           ..._pieces.map((_PieceData pieceData) => Positioned(
-                            left: pieceData.offset.dx * dimension,
-                            top: pieceData.offset.dy * dimension,
+                            left: pieceData.offset.dx * size.width,
+                            top: pieceData.offset.dy * size.height,
                             child: _DraggablePiece(
-                              height: dimension / 12,
+                              height: pieceSide,
                               onDragStarted: () {
                                 setState(() {
                                   _pieces.remove(pieceData);
                                 });
                               },
                               team: pieceData.team,
-                              width: dimension / 12,
+                              width: pieceSide,
                             ),
                           )).toList(),
                         ],
