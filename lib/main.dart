@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 // The aspect ratio of the board image. Could be derived from the image asset...
-const double _boardAspectRatio = 1080.0 / 1296.0;
+const double _boardAspectRatio = 1.0;
 
 void main() {
   runApp(MyApp());
