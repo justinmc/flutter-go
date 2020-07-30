@@ -107,8 +107,8 @@ class _GameState extends State<_Game> {
     setState(() {
       _pieces.add(_PieceData(
         offset: Offset(
-          sceneOffset.dx / constraintsSize.width,
-          sceneOffset.dy / constraintsSize.height,
+          sceneOffset.dx / constraintsSize.width - _kPieceSizeVsBoard / 2,
+          sceneOffset.dy / constraintsSize.height - _kPieceSizeVsBoard / 2,
         ),
         team: team,
       ));
@@ -190,7 +190,7 @@ class _GameState extends State<_Game> {
                           builder: (BuildContext context, List<_Team> candidateData, List rejectedData) {
                             // The length of a side of a square piece. It's an
                             // arbitrary proportion of the board size.
-                            final double pieceSide = math.min(_boardSize.width, _boardSize.height) / 12;
+                            final double pieceSide = math.min(_boardSize.width, _boardSize.height) * _kPieceSizeVsBoard;
                             return Stack(
                               children: <Widget>[
                                 Padding(
@@ -254,8 +254,10 @@ class _GameState extends State<_Game> {
   }
 }
 
-// The default size of a piece. Used in the inventory.
+// The size of a piece outside of InteractiveViewer.
 const double _kPieceDimension = 40.0;
+// The size of a piece as a fraction of the board.
+const double _kPieceSizeVsBoard = 1 / 12;
 
 // A single game piece.
 class _Piece extends StatelessWidget {
