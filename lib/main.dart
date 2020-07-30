@@ -33,38 +33,13 @@ class MyHomePage extends StatelessWidget {
       appBar: AppBar(
         title: Text(title),
       ),
-      body: Stack(
-        children: <Widget>[
-          Center(
-            child: _Board(),
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              height: 120.0,
-              color: Colors.grey,
-              child: Padding(
-                padding: EdgeInsets.all(12.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    _DraggablePiece(
-                      team: _Team.black,
-                    ),
-                    _DraggablePiece(
-                      team: _Team.white,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+      body: _Game(),
     );
   }
 }
 
+typedef void _TeamCallback(_Team team);
+typedef void _PieceDataCallback(_PieceData pieceData);
 enum _Team {
   black,
   white,
@@ -84,11 +59,94 @@ class _PieceData {
   final _Team team;
 }
 
+// The entire game UI. Game board and piece inventory.
+class _Game extends StatefulWidget {
+  _Game({
+    Key key,
+  }) : super(key: key);
+
+  @override
+  _GameState createState() => _GameState();
+}
+
+class _GameState extends State<_Game> {
+  final List<_PieceData> _pieces = <_PieceData>[];
+
+  void _onRemovePiece(_PieceData pieceData) {
+    setState(() {
+      _pieces.remove(pieceData);
+    });
+  }
+
+  void _onAddPiece(_PieceData pieceData) {
+    setState(() {
+      _pieces.add(pieceData);
+    });
+  }
+
+  // Handles one of the off-board inventory pieces being tapped.
+  void _onTapPieceInventory(_Team team) {
+    setState(() {
+      _pieces.add(_PieceData(
+        offset: Offset(0.5, 0.5),
+        team: team,
+      ));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        Center(
+          child: _Board(
+            pieces: _pieces,
+            onAddPiece: _onAddPiece,
+            onRemovePiece: _onRemovePiece,
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            height: 120.0,
+            color: Colors.grey,
+            child: Padding(
+              padding: EdgeInsets.all(12.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: <Widget>[
+                  _InventoryPiece(
+                    onTap: _onTapPieceInventory,
+                    team: _Team.black,
+                  ),
+                  _InventoryPiece(
+                    onTap: _onTapPieceInventory,
+                    team: _Team.white,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // The game board widget.
 class _Board extends StatefulWidget {
   _Board({
     Key key,
-  }) : super(key: key);
+    this.onAddPiece,
+    this.onRemovePiece,
+    this.pieces,
+  }) : assert(pieces != null),
+       assert(onRemovePiece != null),
+       super(key: key);
+
+  final _PieceDataCallback onAddPiece;
+  final _PieceDataCallback onRemovePiece;
+  final List<_PieceData> pieces;
 
   @override
   _BoardState createState() => _BoardState();
@@ -96,7 +154,6 @@ class _Board extends StatefulWidget {
 
 class _BoardState extends State<_Board> {
   final GlobalKey _dragTargetKey = GlobalKey();
-  final List<_PieceData> _pieces = <_PieceData>[];
   Uint8List _imageData;
   double _imageAspectRatio;
 
@@ -114,6 +171,20 @@ class _BoardState extends State<_Board> {
       _imageData = imageData;
       _imageAspectRatio = image.width.toDouble() / image.height.toDouble();
     });
+  }
+
+  // Called when a piece is dropped on the board.
+  void _onAcceptWithDetails(DragTargetDetails details, Size size) {
+    final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
+    final Offset localOffset = renderBox.globalToLocal(details.offset);
+    final Offset offset = Offset(
+      localOffset.dx / size.width,
+      localOffset.dy / size.height,
+    );
+    widget.onAddPiece(_PieceData(
+      offset: offset,
+      team: details.data,
+    ));
   }
 
   @override
@@ -151,18 +222,7 @@ class _BoardState extends State<_Board> {
                   return DragTarget<_Team>(
                     key: _dragTargetKey,
                     onAcceptWithDetails: (DragTargetDetails details) {
-                      final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
-                      final Offset localOffset = renderBox.globalToLocal(details.offset);
-                      final Offset offset = Offset(
-                        localOffset.dx / size.width,
-                        localOffset.dy / size.height,
-                      );
-                      setState(() {
-                        _pieces.add(_PieceData(
-                          offset: offset,
-                          team: details.data,
-                        ));
-                      });
+                      _onAcceptWithDetails(details, size);
                     },
                     onWillAccept: (_Team team) => true,
                     builder: (BuildContext context, List<_Team> candidateData, List rejectedData) {
@@ -178,16 +238,14 @@ class _BoardState extends State<_Board> {
                               child: Image.memory(_imageData),
                             ),
                           ),
-                          ..._pieces
+                          ...widget.pieces
                               .map((_PieceData pieceData) => Positioned(
                                     left: pieceData.offset.dx * size.width,
                                     top: pieceData.offset.dy * size.height,
                                     child: _DraggablePiece(
                                       height: pieceSide,
                                       onDragStarted: () {
-                                        setState(() {
-                                          _pieces.remove(pieceData);
-                                        });
+                                        widget.onRemovePiece(pieceData);
                                       },
                                       team: pieceData.team,
                                       width: pieceSide,
@@ -273,6 +331,33 @@ class _DraggablePiece extends StatelessWidget {
         height: height,
         team: team,
         width: width,
+      ),
+    );
+  }
+}
+
+// One of the two pieces on the side of the board that can be used to create
+// new pieces on the board.
+class _InventoryPiece extends StatelessWidget {
+  _InventoryPiece({
+    Key key,
+    @required this.team,
+    @required this.onTap,
+  }) : assert(team != null),
+       assert(onTap != null),
+       super(key: key);
+
+  final _TeamCallback onTap;
+  final _Team team;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        onTap(team);
+      },
+      child: _DraggablePiece(
+        team: team,
       ),
     );
   }
