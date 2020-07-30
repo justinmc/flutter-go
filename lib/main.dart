@@ -70,7 +70,15 @@ class _Game extends StatefulWidget {
 }
 
 class _GameState extends State<_Game> {
+  final GlobalKey _dragTargetKey = GlobalKey();
+  double _imageAspectRatio;
+  Uint8List _imageData;
   final List<_PieceData> _pieces = <_PieceData>[];
+  final TransformationController _transformationController = TransformationController();
+
+  // Cached value of board size and constraints aspect ratio at last render.
+  Size _boardSize;
+  double _constraintsAspectRatio;
 
   void _onRemovePiece(_PieceData pieceData) {
     setState(() {
@@ -86,23 +94,136 @@ class _GameState extends State<_Game> {
 
   // Handles one of the off-board inventory pieces being tapped.
   void _onTapPieceInventory(_Team team) {
+    // Calculate the offset that will put the piece near the center of the part
+    // of the board that is visible.
+    final Size constraintsSize = Size(
+      _boardSize.width * math.max(1.0, _constraintsAspectRatio),
+      _boardSize.height / math.min(1.0, _constraintsAspectRatio),
+    );
+    final Offset sceneOffset = _transformationController.toScene(Offset(
+      constraintsSize.width / 2,
+      constraintsSize.height / 2,
+    ));
     setState(() {
       _pieces.add(_PieceData(
-        offset: Offset(0.5, 0.5),
+        offset: Offset(
+          sceneOffset.dx / constraintsSize.width,
+          sceneOffset.dy / constraintsSize.height,
+        ),
         team: team,
       ));
     });
   }
 
+  // Load the image in advance in order to get its size.
+  void _loadImage() async {
+    // from https://www.1001freedownloads.com/free-clipart/go-board-9-x-9
+    // under CC license: https://creativecommons.org/publicdomain/zero/1.0/
+    final ByteData imageByteData = await rootBundle.load('images/go_board_09x09.png');
+    final Uint8List imageData = imageByteData.buffer.asUint8List(
+      imageByteData.offsetInBytes,
+      imageByteData.lengthInBytes,
+    );
+    final ui.Image image = await decodeImageFromList(imageData);
+    setState(() {
+      _imageData = imageData;
+      _imageAspectRatio = image.width.toDouble() / image.height.toDouble();
+    });
+  }
+
+  // Called when a piece is dropped on the board.
+  void _onAcceptWithDetails(DragTargetDetails details, Size size) {
+    final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
+    final Offset localOffset = renderBox.globalToLocal(details.offset);
+    final Offset offset = Offset(
+      localOffset.dx / size.width,
+      localOffset.dy / size.height,
+    );
+    _onAddPiece(_PieceData(
+      offset: offset,
+      team: details.data,
+    ));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Don't render until the image has been loaded.
+    if (_imageData == null || _imageAspectRatio == null) {
+      return SizedBox.shrink();
+    }
+
     return Stack(
       children: <Widget>[
         Center(
-          child: _Board(
-            pieces: _pieces,
-            onAddPiece: _onAddPiece,
-            onRemovePiece: _onRemovePiece,
+          child: InteractiveViewer(
+            transformationController: _transformationController,
+            child: Stack(
+              children: <Widget>[
+                Container(
+                  child: Center(
+                    child: LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints constraints) {
+                        // Calculate the size of the board assuming it is sized to
+                        // fill the constraints.
+                        _constraintsAspectRatio = constraints.maxWidth / constraints.maxHeight;
+                        _boardSize = Size(
+                          _imageAspectRatio > _constraintsAspectRatio
+                              ? constraints.maxWidth
+                              : constraints.maxHeight * _imageAspectRatio,
+                          _imageAspectRatio > _constraintsAspectRatio
+                              ? constraints.maxWidth / _imageAspectRatio
+                              : constraints.maxHeight,
+                        );
+
+                        return DragTarget<_Team>(
+                          key: _dragTargetKey,
+                          onAcceptWithDetails: (DragTargetDetails details) {
+                            _onAcceptWithDetails(details, _boardSize);
+                          },
+                          onWillAccept: (_Team team) => true,
+                          builder: (BuildContext context, List<_Team> candidateData, List rejectedData) {
+                            // The length of a side of a square piece. It's an
+                            // arbitrary proportion of the board size.
+                            final double pieceSide = math.min(_boardSize.width, _boardSize.height) / 12;
+                            return Stack(
+                              children: <Widget>[
+                                Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Container(
+                                    color: Colors.brown,
+                                    child: Image.memory(_imageData),
+                                  ),
+                                ),
+                                ..._pieces
+                                    .map((_PieceData pieceData) => Positioned(
+                                          left: pieceData.offset.dx * _boardSize.width,
+                                          top: pieceData.offset.dy * _boardSize.height,
+                                          child: _DraggablePiece(
+                                            height: pieceSide,
+                                            onDragStarted: () {
+                                              _onRemovePiece(pieceData);
+                                            },
+                                            team: pieceData.team,
+                                            width: pieceSide,
+                                          ),
+                                        ))
+                                    .toList(),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         Align(
@@ -133,147 +254,17 @@ class _GameState extends State<_Game> {
   }
 }
 
-// The game board widget.
-class _Board extends StatefulWidget {
-  _Board({
-    Key key,
-    this.onAddPiece,
-    this.onRemovePiece,
-    this.pieces,
-  }) : assert(pieces != null),
-       assert(onRemovePiece != null),
-       super(key: key);
-
-  final _PieceDataCallback onAddPiece;
-  final _PieceDataCallback onRemovePiece;
-  final List<_PieceData> pieces;
-
-  @override
-  _BoardState createState() => _BoardState();
-}
-
-class _BoardState extends State<_Board> {
-  final GlobalKey _dragTargetKey = GlobalKey();
-  Uint8List _imageData;
-  double _imageAspectRatio;
-
-  // Load the image in advance in order to get its size.
-  void _loadImage() async {
-    // from https://www.1001freedownloads.com/free-clipart/go-board-9-x-9
-    // under CC license: https://creativecommons.org/publicdomain/zero/1.0/
-    final ByteData imageByteData = await rootBundle.load('images/go_board_09x09.png');
-    final Uint8List imageData = imageByteData.buffer.asUint8List(
-      imageByteData.offsetInBytes,
-      imageByteData.lengthInBytes,
-    );
-    final ui.Image image = await decodeImageFromList(imageData);
-    setState(() {
-      _imageData = imageData;
-      _imageAspectRatio = image.width.toDouble() / image.height.toDouble();
-    });
-  }
-
-  // Called when a piece is dropped on the board.
-  void _onAcceptWithDetails(DragTargetDetails details, Size size) {
-    final RenderBox renderBox = _dragTargetKey.currentContext.findRenderObject();
-    final Offset localOffset = renderBox.globalToLocal(details.offset);
-    final Offset offset = Offset(
-      localOffset.dx / size.width,
-      localOffset.dy / size.height,
-    );
-    widget.onAddPiece(_PieceData(
-      offset: offset,
-      team: details.data,
-    ));
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadImage();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Don't render until the image has been loaded.
-    if (_imageData == null || _imageAspectRatio == null) {
-      return SizedBox.shrink();
-    }
-
-    return InteractiveViewer(
-      child: Stack(
-        children: <Widget>[
-          Container(
-            child: Center(
-              child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  // Calculate the size of the board assuming it is sized to
-                  // fill the constraints.
-                  final double constraintsAspectRatio = constraints.maxWidth / constraints.maxHeight;
-                  final Size size = Size(
-                    _imageAspectRatio > constraintsAspectRatio
-                        ? constraints.maxWidth
-                        : constraints.maxHeight * _imageAspectRatio,
-                    _imageAspectRatio > constraintsAspectRatio
-                        ? constraints.maxWidth / _imageAspectRatio
-                        : constraints.maxHeight,
-                  );
-
-                  return DragTarget<_Team>(
-                    key: _dragTargetKey,
-                    onAcceptWithDetails: (DragTargetDetails details) {
-                      _onAcceptWithDetails(details, size);
-                    },
-                    onWillAccept: (_Team team) => true,
-                    builder: (BuildContext context, List<_Team> candidateData, List rejectedData) {
-                      // The length of a side of a square piece. It's an
-                      // arbitrary proportion of the board size.
-                      final double pieceSide = math.min(size.width, size.height) / 12;
-                      return Stack(
-                        children: <Widget>[
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Container(
-                              color: Colors.brown,
-                              child: Image.memory(_imageData),
-                            ),
-                          ),
-                          ...widget.pieces
-                              .map((_PieceData pieceData) => Positioned(
-                                    left: pieceData.offset.dx * size.width,
-                                    top: pieceData.offset.dy * size.height,
-                                    child: _DraggablePiece(
-                                      height: pieceSide,
-                                      onDragStarted: () {
-                                        widget.onRemovePiece(pieceData);
-                                      },
-                                      team: pieceData.team,
-                                      width: pieceSide,
-                                    ),
-                                  ))
-                              .toList(),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// The default size of a piece. Used in the inventory.
+const double _kPieceDimension = 40.0;
 
 // A single game piece.
 class _Piece extends StatelessWidget {
   _Piece({
     Key key,
-    this.height = 40.0,
+    this.height = _kPieceDimension,
     this.isDragging = false,
     this.team,
-    this.width = 40.0,
+    this.width = _kPieceDimension,
   })  : assert(team != null),
         assert(height != null),
         assert(width != null),
@@ -299,11 +290,11 @@ class _Piece extends StatelessWidget {
 class _DraggablePiece extends StatelessWidget {
   _DraggablePiece({
     Key key,
-    this.height = 40.0,
+    this.height = _kPieceDimension,
     this.isDragging = false,
     this.onDragStarted,
     this.team,
-    this.width = 40.0,
+    this.width = _kPieceDimension,
   })  : assert(team != null),
         super(key: key);
 
