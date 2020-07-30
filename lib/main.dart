@@ -1,8 +1,8 @@
+import 'dart:typed_data';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-
-// The aspect ratio of the board image. Could be derived from the image asset...
-const double _boardAspectRatio = 1.0;
+import 'package:flutter/services.dart' show rootBundle;
 
 void main() {
   runApp(MyApp());
@@ -97,9 +97,38 @@ class _Board extends StatefulWidget {
 class _BoardState extends State<_Board> {
   final GlobalKey _dragTargetKey = GlobalKey();
   final List<_PieceData> _pieces = <_PieceData>[];
+  Uint8List _imageData;
+  double _imageAspectRatio;
+
+  // Load the image in advance in order to get its size.
+  void _loadImage() async {
+    // from https://www.1001freedownloads.com/free-clipart/go-board-9-x-9
+    // under CC license: https://creativecommons.org/publicdomain/zero/1.0/
+    final ByteData imageByteData = await rootBundle.load('images/go_board_09x09.png');
+    final Uint8List imageData = imageByteData.buffer.asUint8List(
+      imageByteData.offsetInBytes,
+      imageByteData.lengthInBytes,
+    );
+    final ui.Image image = await decodeImageFromList(imageData);
+    setState(() {
+      _imageData = imageData;
+      _imageAspectRatio = image.width.toDouble() / image.height.toDouble();
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Don't render until the image has been loaded.
+    if (_imageData == null || _imageAspectRatio == null) {
+      return SizedBox.shrink();
+    }
+
     return InteractiveViewer(
       child: Stack(
         children: <Widget>[
@@ -111,11 +140,11 @@ class _BoardState extends State<_Board> {
                   // fill the constraints.
                   final double constraintsAspectRatio = constraints.maxWidth / constraints.maxHeight;
                   final Size size = Size(
-                    _boardAspectRatio > constraintsAspectRatio
+                    _imageAspectRatio > constraintsAspectRatio
                         ? constraints.maxWidth
-                        : constraints.maxHeight * _boardAspectRatio,
-                    _boardAspectRatio > constraintsAspectRatio
-                        ? constraints.maxWidth / _boardAspectRatio
+                        : constraints.maxHeight * _imageAspectRatio,
+                    _imageAspectRatio > constraintsAspectRatio
+                        ? constraints.maxWidth / _imageAspectRatio
                         : constraints.maxHeight,
                   );
 
@@ -146,11 +175,7 @@ class _BoardState extends State<_Board> {
                             padding: const EdgeInsets.all(8.0),
                             child: Container(
                               color: Colors.brown,
-                              child: Image.asset(
-                                // from https://www.1001freedownloads.com/free-clipart/go-board-9-x-9
-                                // under CC license: https://creativecommons.org/publicdomain/zero/1.0/
-                                'images/go_board_09x09.png',
-                              ),
+                              child: Image.memory(_imageData),
                             ),
                           ),
                           ..._pieces
