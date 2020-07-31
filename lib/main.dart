@@ -281,7 +281,10 @@ class _Piece extends StatelessWidget {
   Widget build(BuildContext context) {
     final double opacity = isDragging ? 0.4 : 1.0;
     return Container(
-      color: team == _Team.black ? Colors.black.withOpacity(opacity) : Colors.white.withOpacity(opacity),
+      decoration: BoxDecoration(
+        color: team == _Team.black ? Colors.black.withOpacity(opacity) : Colors.white.withOpacity(opacity),
+        shape: BoxShape.circle,
+      ),
       width: width,
       height: height,
     );
