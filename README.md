@@ -1,10 +1,10 @@
-# go
+# Go
 
-An example of using [InteractiveViewer](https://master-api.flutter.dev/flutter/widgets/InteractiveViewer-class.html) to build a go game board.
+An example of using [InteractiveViewer](https://master-api.flutter.dev/flutter/widgets/InteractiveViewer-class.html) to build a Go game board.
 
 ![Screenshot](images/screenshot.png)
 
-## usage
+## Usage
 Zoom using pinch on mobile or two-finger scroll on touchpad or scroll wheel on mouse.
 
 Pan using tap and drag or click and drag.
