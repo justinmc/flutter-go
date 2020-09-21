@@ -2,6 +2,8 @@
 
 An example of using [InteractiveViewer](https://master-api.flutter.dev/flutter/widgets/InteractiveViewer-class.html) to build a Go game board.
 
+Try the [live demo](https://justinmc.github.io/flutter-go/).
+
 ![Screenshot](images/screenshot.png)
 
 ## Usage
