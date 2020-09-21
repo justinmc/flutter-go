@@ -11,8 +11,8 @@ const RESOURCES = {
 "assets/images/go_board_09x09.png": "c38adfc9dcfa5a47d72205623ea9e396",
 "assets/AssetManifest.json": "4bb7db45c91e4c305f265fe00f27e684",
 "favicon.png": "5dcef449791fa27946b3d35ad8803796",
-"index.html": "b64a0d3266a70d5c31da7babd1511837",
-"/": "b64a0d3266a70d5c31da7babd1511837",
+"index.html": "449ade32413b028c879d7c2b6c64cbbe",
+"/": "449ade32413b028c879d7c2b6c64cbbe",
 "manifest.json": "a52b8572bcf9e38b2554a22b534f6093",
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1"
